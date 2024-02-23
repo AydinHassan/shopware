@@ -266,7 +266,7 @@ class FlowDispatcherTest extends TestCase
             ],
         ]);
 
-        $internalException = FlowException::transactionCommitFailed(new TableNotFoundException(
+        $internalException = FlowException::transactionFailed(new TableNotFoundException(
             new DbalPdoException('Table not found', null, 1146),
             null
         ));
@@ -285,11 +285,11 @@ class FlowDispatcherTest extends TestCase
         $this->container->method('get')->willReturnOnConsecutiveCalls($flowLoader, $flowExecutor);
 
         $this->expectException(FlowException::class);
-        $this->expectExceptionMessage('Flow action transaction could not be committed. An exception occurred: An exception occurred in the driver: Table not found');
+        $this->expectExceptionMessage('Flow action transaction could not be committed and was rolled back. Exception: An exception occurred in the driver: Table not found');
 
         $this->logger->expects(static::once())
             ->method('error')
-            ->with("Could not execute flow with error message:\nFlow name: Order enters status in progress\nFlow id: flow-1\nSequence id: sequence-1\nFlow action transaction could not be committed. An exception occurred: An exception occurred in the driver: Table not found\nError Code: 0\n");
+            ->with("Could not execute flow with error message:\nFlow name: Order enters status in progress\nFlow id: flow-1\nSequence id: sequence-1\nFlow action transaction could not be committed and was rolled back. Exception: An exception occurred in the driver: Table not found\nError Code: 0\n");
 
         $this->flowDispatcher->dispatch($event);
     }
@@ -323,7 +323,7 @@ class FlowDispatcherTest extends TestCase
             ],
         ]);
 
-        $internalException = FlowException::transactionCommitFailed(new TableNotFoundException(
+        $internalException = FlowException::transactionFailed(new TableNotFoundException(
             new DbalPdoException('Table not found', null, 1146),
             null
         ));
@@ -346,7 +346,7 @@ class FlowDispatcherTest extends TestCase
 
         $this->logger->expects(static::once())
             ->method('error')
-            ->with("Could not execute flow with error message:\nFlow name: Order enters status in progress\nFlow id: flow-1\nSequence id: sequence-1\nFlow action transaction could not be committed. An exception occurred: An exception occurred in the driver: Table not found\nError Code: 0\n");
+            ->with("Could not execute flow with error message:\nFlow name: Order enters status in progress\nFlow id: flow-1\nSequence id: sequence-1\nFlow action transaction could not be committed and was rolled back. Exception: An exception occurred in the driver: Table not found\nError Code: 0\n");
 
         $this->flowDispatcher->dispatch($event);
     }

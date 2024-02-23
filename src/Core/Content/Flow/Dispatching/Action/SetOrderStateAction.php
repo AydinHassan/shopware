@@ -88,9 +88,9 @@ class SetOrderStateAction extends FlowAction implements DelayableAction, Transac
             }
         } catch (StateMachineException $e) {
             throw TransactionFailedException::because($e);
+        } finally {
+            $context->removeState(self::FORCE_TRANSITION);
         }
-
-        $context->removeState(self::FORCE_TRANSITION);
     }
 
     /**

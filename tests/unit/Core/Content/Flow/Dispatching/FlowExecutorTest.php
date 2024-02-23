@@ -23,6 +23,7 @@ use Shopware\Core\Content\Flow\Dispatching\Struct\Flow;
 use Shopware\Core\Content\Flow\Dispatching\Struct\IfSequence;
 use Shopware\Core\Content\Flow\Dispatching\Struct\Sequence;
 use Shopware\Core\Content\Flow\Dispatching\TransactionalAction;
+use Shopware\Core\Content\Flow\Dispatching\TransactionFailedException;
 use Shopware\Core\Content\Flow\Exception\ExecuteSequenceException;
 use Shopware\Core\Content\Flow\FlowException;
 use Shopware\Core\Content\Flow\Rule\FlowRuleScope;
@@ -306,7 +307,7 @@ class FlowExecutorTest extends TestCase
         static::assertTrue($action->handled);
     }
 
-    public function testTransactionExceptionIsWrapped(): void
+    public function testTransactionCommitFailureExceptionIsWrapped(): void
     {
         $ids = new TestDataCollection();
         $eventDispatcher = $this->createMock(EventDispatcherInterface::class);
@@ -347,6 +348,9 @@ class FlowExecutorTest extends TestCase
             ->method('commit')
             ->willThrowException($e);
 
+        $connection->expects(static::once())
+            ->method('rollBack');
+
         $flow = new StorableFlow('some-flow', Context::createDefaultContext());
         $flow->setFlowState(new FlowState());
 
@@ -360,6 +364,111 @@ class FlowExecutorTest extends TestCase
         } catch (FlowException $e) {
             static::assertSame(FlowException::FLOW_ACTION_TRANSACTION_COMMIT_FAILED, $e->getErrorCode());
             static::assertSame('An exception occurred in the driver: Table not found', $e->getPrevious()?->getMessage());
+        }
+    }
+
+    public function testTransactionAbortExceptionIsWrapped(): void
+    {
+        $ids = new TestDataCollection();
+        $eventDispatcher = $this->createMock(EventDispatcherInterface::class);
+        $appFlowActionProvider = $this->createMock(AppFlowActionProvider::class);
+        $ruleLoader = $this->createMock(AbstractRuleLoader::class);
+        $scopeBuilder = $this->createMock(FlowRuleScopeBuilder::class);
+        $connection = $this->createMock(Connection::class);
+
+        $action = new class() extends FlowAction implements TransactionalAction {
+            public function requirements(): array
+            {
+                return [];
+            }
+
+            public function handleFlow(StorableFlow $flow): void
+            {
+                throw TransactionFailedException::because(new \Exception('broken'));
+            }
+
+            public static function getName(): string
+            {
+                return 'transactional-action';
+            }
+        };
+
+        $actionSequence = new ActionSequence();
+        $actionSequence->sequenceId = $ids->get($action::class);
+        $actionSequence->action = $action::class;
+
+        $connection->expects(static::once())
+            ->method('beginTransaction');
+
+        $connection->expects(static::once())
+            ->method('rollBack');
+
+        $flow = new StorableFlow('some-flow', Context::createDefaultContext());
+        $flow->setFlowState(new FlowState());
+
+        $flowExecutor = new FlowExecutor($eventDispatcher, $appFlowActionProvider, $ruleLoader, $scopeBuilder, $connection, [
+            $action::class => $action,
+        ]);
+
+        try {
+            $flowExecutor->executeAction($actionSequence, $flow);
+            static::fail(FlowException::class . ' should be thrown');
+        } catch (FlowException $e) {
+            static::assertSame(FlowException::FLOW_ACTION_TRANSACTION_ABORTED, $e->getErrorCode());
+            static::assertSame('Transaction failed because an exception occurred', $e->getPrevious()?->getMessage());
+        }
+    }
+
+    public function testTransactionWithUncaughtExceptionIsWrapped(): void
+    {
+        $ids = new TestDataCollection();
+        $eventDispatcher = $this->createMock(EventDispatcherInterface::class);
+        $appFlowActionProvider = $this->createMock(AppFlowActionProvider::class);
+        $ruleLoader = $this->createMock(AbstractRuleLoader::class);
+        $scopeBuilder = $this->createMock(FlowRuleScopeBuilder::class);
+        $connection = $this->createMock(Connection::class);
+
+        $action = new class() extends FlowAction implements TransactionalAction {
+            public function requirements(): array
+            {
+                return [];
+            }
+
+            public function handleFlow(StorableFlow $flow): void
+            {
+                /** @phpstan-ignore-next-line  */
+                throw new \Exception('broken');
+            }
+
+            public static function getName(): string
+            {
+                return 'transactional-action';
+            }
+        };
+
+        $actionSequence = new ActionSequence();
+        $actionSequence->sequenceId = $ids->get($action::class);
+        $actionSequence->action = $action::class;
+
+        $connection->expects(static::once())
+            ->method('beginTransaction');
+
+        $connection->expects(static::once())
+            ->method('rollBack');
+
+        $flow = new StorableFlow('some-flow', Context::createDefaultContext());
+        $flow->setFlowState(new FlowState());
+
+        $flowExecutor = new FlowExecutor($eventDispatcher, $appFlowActionProvider, $ruleLoader, $scopeBuilder, $connection, [
+            $action::class => $action,
+        ]);
+
+        try {
+            $flowExecutor->executeAction($actionSequence, $flow);
+            static::fail(FlowException::class . ' should be thrown');
+        } catch (FlowException $e) {
+            static::assertSame(FlowException::FLOW_ACTION_TRANSACTION_UNCAUGHT_EXCEPTION, $e->getErrorCode());
+            static::assertSame('broken', $e->getPrevious()?->getMessage());
         }
     }
 }

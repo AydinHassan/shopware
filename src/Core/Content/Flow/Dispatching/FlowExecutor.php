@@ -155,11 +155,18 @@ class FlowExecutor
 
         try {
             $action->handleFlow($event);
-            $this->connection->commit();
-        } catch (TransactionFailedException|DBALException $e) {
+        } catch (\Throwable $e) {
             $this->connection->rollBack();
 
-            throw FlowException::transactionCommitFailed($e);
+            throw FlowException::transactionFailed($e);
+        }
+
+        try {
+            $this->connection->commit();
+        } catch (DBALException $e) {
+            $this->connection->rollBack();
+
+            throw FlowException::transactionFailed($e);
         }
     }
 

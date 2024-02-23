@@ -73,6 +73,7 @@ The transaction will be rollback if either of the following are true:
 
 1. If Doctrine throws an instance of `Doctrine\DBAL\Exception` during commit.
 2. If the action throws an instance of `TransactionFailedException` during execution.
+3. If another non-handled exception is thrown during the action execution. This is to aid debugging.
 
 If the transaction fails, then the error will be logged. Also, if the transaction has been performed inside a nested transaction without save points enabled, the exception will be rethrown.
 So that the calling code knows something went wrong and is able to handle it correctly, by rolling back instead of committing. As, in this instance, the connection will be marked as rollback only.
