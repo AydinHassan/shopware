@@ -187,8 +187,15 @@ class FlowDispatcher implements EventDispatcherInterface
 
     private function isCommitFailedError(?\Throwable $exception): bool
     {
-        return $exception instanceof FlowException
-            && $exception->getErrorCode() === FlowException::FLOW_ACTION_TRANSACTION_COMMIT_FAILED;
+        return $exception instanceof FlowException && \in_array(
+            $exception->getErrorCode(),
+            [
+                FlowException::FLOW_ACTION_TRANSACTION_ABORTED,
+                FlowException::FLOW_ACTION_TRANSACTION_COMMIT_FAILED,
+                FlowException::FLOW_ACTION_TRANSACTION_UNCAUGHT_EXCEPTION,
+            ],
+            true
+        );
     }
 
     private function isInNestedTransaction(): bool
