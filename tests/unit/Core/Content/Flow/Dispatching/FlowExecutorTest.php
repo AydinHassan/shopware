@@ -415,7 +415,7 @@ class FlowExecutorTest extends TestCase
             static::fail(FlowException::class . ' should be thrown');
         } catch (FlowException $e) {
             static::assertSame(FlowException::FLOW_ACTION_TRANSACTION_ABORTED, $e->getErrorCode());
-            static::assertSame('Transaction failed because an exception occurred', $e->getPrevious()?->getMessage());
+            static::assertSame('Transaction failed because an exception occurred. Exception: broken', $e->getPrevious()?->getMessage());
         }
     }
 

@@ -16,7 +16,7 @@ class TransactionFailedException extends FlowException
         return new self(
             Response::HTTP_INTERNAL_SERVER_ERROR,
             self::TRANSACTION_FAILED,
-            'Transaction failed because an exception occurred',
+            'Transaction failed because an exception occurred. Exception: ' . $e->getMessage(),
             [],
             $e,
         );

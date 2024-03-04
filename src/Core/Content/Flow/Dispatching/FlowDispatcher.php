@@ -7,7 +7,6 @@ use Psr\EventDispatcher\StoppableEventInterface;
 use Psr\Log\LoggerInterface;
 use Shopware\Core\Content\Flow\Dispatching\Struct\Flow;
 use Shopware\Core\Content\Flow\Exception\ExecuteSequenceException;
-use Shopware\Core\Content\Flow\FlowException;
 use Shopware\Core\Framework\Context;
 use Shopware\Core\Framework\Event\FlowEventAware;
 use Shopware\Core\Framework\Event\FlowLogEvent;
@@ -142,7 +141,7 @@ class FlowDispatcher implements EventDispatcherInterface
                     . 'Error Code: ' . $e->getCode() . "\n"
                 );
 
-                if ($e->getPrevious() !== null && $this->isCommitFailedError($e->getPrevious()) && $this->isInNestedTransaction()) {
+                if ($e->getPrevious() && $this->isInNestedTransaction()) {
                     /**
                      * If we are already in a nested transaction, that does not have save points enabled, we must inform the caller of the rollback.
                      * We do this via an exception, so that the outer transaction can also be rolled back.
@@ -183,19 +182,6 @@ class FlowDispatcher implements EventDispatcherInterface
         }
 
         return $result;
-    }
-
-    private function isCommitFailedError(?\Throwable $exception): bool
-    {
-        return $exception instanceof FlowException && \in_array(
-            $exception->getErrorCode(),
-            [
-                FlowException::FLOW_ACTION_TRANSACTION_ABORTED,
-                FlowException::FLOW_ACTION_TRANSACTION_COMMIT_FAILED,
-                FlowException::FLOW_ACTION_TRANSACTION_UNCAUGHT_EXCEPTION,
-            ],
-            true
-        );
     }
 
     private function isInNestedTransaction(): bool

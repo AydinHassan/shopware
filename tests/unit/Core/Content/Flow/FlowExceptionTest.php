@@ -44,7 +44,7 @@ class FlowExceptionTest extends TestCase
             ],
             'action-aborted' => [
                 TransactionFailedException::because(new \Exception('broken')),
-                'Flow action transaction was aborted and rolled back. Exception: Transaction failed because an exception occurred',
+                'Flow action transaction was aborted and rolled back. Exception: Transaction failed because an exception occurred. Exception: broken',
                 TransactionFailedException::FLOW_ACTION_TRANSACTION_ABORTED,
             ],
             'uncaught-exception' => [
